@@ -7,7 +7,7 @@ import { trace } from "../utils/decorator";
 import { HttpClient } from '../utils/httpClient';
 import { RequestState, RequestStatusEntry } from '../utils/requestStatusBarEntry';
 import { RequestVariableCache } from "../utils/requestVariableCache";
-import { Selector } from '../utils/selector';
+import { SelectedRequest, Selector } from '../utils/selector';
 import { UserDataManager } from '../utils/userDataManager';
 import { getCurrentTextDocument } from '../utils/workspaceUtility';
 import { HttpResponseTextDocumentView } from '../views/httpResponseTextDocumentView';
@@ -41,6 +41,10 @@ export class RequestController {
         const selectedRequest = await Selector.getRequest(editor, range);
         if (!selectedRequest) {
             return;
+        }
+        let dependsOn: SelectedRequest | null;
+        if (selectedRequest.dependsOn) {
+            dependsOn = await Selector.getRequestByName(editor, selectedRequest.dependsOn);
         }
 
         const { text, name, warnBeforeSend } = selectedRequest;

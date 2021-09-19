@@ -66,7 +66,12 @@ export const FileVariableDefinitionRegex: RegExp = /^\s*@([^\s=]+)\s*=\s*(.*?)\s
 export const RequestVariableDefinitionWithNameRegexFactory = (name: string, flags?: string): RegExp =>
     new RegExp(`^\\s*(?:#{1,}|\\/{2,})\\s+@name\\s+(${name})\\s*$`, flags);
 
+export const RequestDependsOnRegexFactory = (name: string, flags?: string): RegExp =>
+    new RegExp(`^\\s*(?:#{1,}|\\/{2,})\\s+@dependsOn\\s+(${name})\\s*$`, flags);
+
 export const RequestVariableDefinitionRegex: RegExp = RequestVariableDefinitionWithNameRegexFactory("\\w+", "m");
+
+export const RequestDependsOnRegex: RegExp = RequestDependsOnRegexFactory("\\w+", "m");
 
 export const NoteCommentRegex = /^\s*(?:#{1,}|\/{2,})\s*@note\s*$/m;
 

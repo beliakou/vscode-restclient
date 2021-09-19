@@ -14,6 +14,7 @@ export interface SelectedRequest {
     text: string;
     name?: string;
     warnBeforeSend: boolean;
+    dependsOn?: string;
 }
 
 export class Selector {
@@ -39,6 +40,9 @@ export class Selector {
         // parse request variable definition name
         const requestVariable = this.getRequestVariableDefinitionName(selectedText);
 
+        // parse @dependsOn request name
+        const dependsOn = this.getRequestDependsOnName(selectedText);
+
         // parse #@note comment
         const warnBeforeSend = this.hasNoteComment(selectedText);
 
@@ -57,8 +61,18 @@ export class Selector {
         return {
             text: selectedText,
             name: requestVariable,
-            warnBeforeSend
+            warnBeforeSend,
+            dependsOn
         };
+    }
+
+    public static async getRequestByName(editor: TextEditor, name: string): Promise<SelectedRequest | null> {
+        const fullText: string = editor.document.getText();
+        const lines: string[] = fullText.split(Constants.LineSplitterRegex);
+        const requestLine = lines
+            .findIndex((line) => Constants.RequestVariableDefinitionWithNameRegexFactory(name).test(line));
+
+        return Selector.getRequest(editor, {start: {line: requestLine}} as Range);
     }
 
     public static getRequestRanges(lines: string[], options?: RequestRangeOptions): [number, number][] {
@@ -127,6 +141,11 @@ export class Selector {
 
     public static getRequestVariableDefinitionName(text: string): string | undefined {
         const matched = text.match(Constants.RequestVariableDefinitionRegex);
+        return matched?.[1];
+    }
+
+    public static getRequestDependsOnName(text: string): string | undefined {
+        const matched = text.match(Constants.RequestDependsOnRegex);
         return matched?.[1];
     }
 
