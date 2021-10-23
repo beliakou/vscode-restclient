@@ -1,4 +1,4 @@
-import { ExtensionContext, Range, TextDocument, ViewColumn, window } from 'vscode';
+import { ExtensionContext, Range, TextDocument, TextEditor, ViewColumn, window } from 'vscode';
 import Logger from '../logger';
 import { RestClientSettings } from '../models/configurationSettings';
 import { HistoricalHttpRequest, HttpRequest } from '../models/httpRequest';
@@ -42,10 +42,8 @@ export class RequestController {
         if (!selectedRequest) {
             return;
         }
-        let dependsOn: SelectedRequest | null;
-        if (selectedRequest.dependsOn) {
-            dependsOn = await Selector.getRequestByName(editor, selectedRequest.dependsOn);
-        }
+
+        const dependencies: Array<SelectedRequest> = await findDependencyRequests(selectedRequest, editor);
 
         const { text, name, warnBeforeSend } = selectedRequest;
 
@@ -55,6 +53,12 @@ export class RequestController {
             if (userConfirmed !== 'Yes') {
                 return;
             }
+        }
+
+
+        for (const dependsOn of dependencies){
+            const dependsOnHttpRequest = await RequestParserFactory.createRequestParser(dependsOn.text).parseHttpRequest(dependsOn.name);
+            await this.runCore(dependsOnHttpRequest, document);
         }
 
         // parse http request
@@ -145,4 +149,28 @@ export class RequestController {
         this._requestStatusEntry.dispose();
         this._webview.dispose();
     }
+}
+
+async function findDependencyRequests(selectedRequest: SelectedRequest, editor: TextEditor): Promise<SelectedRequest[]> {
+    return findDependencyRequest(selectedRequest, editor, new Array<SelectedRequest>());
+}
+
+async function findDependencyRequest(selectedRequest: SelectedRequest, 
+                                    editor: TextEditor,
+                                    dependencyRequests: SelectedRequest[]): Promise<SelectedRequest[]> {
+    if (!selectedRequest.dependsOn) {
+        return dependencyRequests;
+    }
+
+    if (dependencyRequests.find(req => req.name === selectedRequest.dependsOn)) {
+        throw new Error(`Circular dependency on request "${selectedRequest.dependsOn}" found.`);
+    }
+
+    const dependencyRequest: SelectedRequest | null  = await Selector.getRequestByName(editor, selectedRequest.dependsOn);
+    if (!dependencyRequest) {
+        throw new Error(`Request "${selectedRequest.name}" depends on "${selectedRequest.dependsOn}" but it's not found.`);
+    };
+
+    dependencyRequests.unshift(dependencyRequest);
+    return findDependencyRequest(dependencyRequest, editor, dependencyRequests);
 }
