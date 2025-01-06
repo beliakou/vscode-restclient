@@ -82,15 +82,18 @@ export class HttpRequestParser implements RequestParser {
         removeHeader(headers, 'content-length');
 
         // check request type
-        const isGraphQlRequest = getHeader(headers, 'X-Request-Type') === 'GraphQL'.toLowerCase();
+        const isGraphQlRequest = getHeader(headers, 'X-Request-Type')?.toString().toLowerCase() === 'GraphQL'.toLowerCase();
         if (isGraphQlRequest) {
             removeHeader(headers, 'X-Request-Type');
 
             // a request doesn't necessarily need variables to be considered a GraphQL request
-            const firstEmptyLine = bodyLines.findIndex(value => value.trim() === '');
-            if (firstEmptyLine !== -1) {
-                variableLines.push(...bodyLines.splice(firstEmptyLine + 1));
-                bodyLines.pop();    // remove the empty line between body and variables
+            const lastEmptyLine = bodyLines.lastIndexOf('')
+            if (lastEmptyLine !== -1) {
+                const possibleVariableLines = bodyLines.slice(lastEmptyLine + 1);
+                if (this.isValidJson(possibleVariableLines.join(''))) {
+                    variableLines.push(...bodyLines.splice(lastEmptyLine + 1));
+                    bodyLines.pop();    // remove the empty line between body and variables
+                }
             }
         }
 
@@ -227,5 +230,14 @@ export class HttpRequestParser implements RequestParser {
 
     private getLineEnding(contentTypeHeader: string | undefined) {
         return MimeUtility.isMultiPartFormData(contentTypeHeader) ? '\r\n' : EOL;
+    }
+
+    private isValidJson(str: string): boolean {
+        try {
+            JSON.parse(str);
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 }
