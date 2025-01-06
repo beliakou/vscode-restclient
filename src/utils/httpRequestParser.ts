@@ -82,9 +82,10 @@ export class HttpRequestParser implements RequestParser {
         removeHeader(headers, 'content-length');
 
         // check request type
-        const isGraphQlRequest = getHeader(headers, 'X-Request-Type')?.toString().toLowerCase() === 'GraphQL'.toLowerCase();
+        const isGraphQlRequest = requestLine.method.toLowerCase() === 'graphql' || getHeader(headers, 'X-Request-Type')?.toString().toLowerCase() === 'graphql';
         if (isGraphQlRequest) {
             removeHeader(headers, 'X-Request-Type');
+            requestLine.method = 'POST';
 
             // a request doesn't necessarily need variables to be considered a GraphQL request
             const lastEmptyLine = bodyLines.lastIndexOf('')
@@ -155,7 +156,7 @@ export class HttpRequestParser implements RequestParser {
         let url: string;
 
         let match: RegExpExecArray | null;
-        if (match = /^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|CONNECT|TRACE|LOCK|UNLOCK|PROPFIND|PROPPATCH|COPY|MOVE|MKCOL|MKCALENDAR|ACL|SEARCH)\s+/i.exec(line)) {
+        if (match = /^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|CONNECT|TRACE|LOCK|UNLOCK|PROPFIND|PROPPATCH|COPY|MOVE|MKCOL|MKCALENDAR|ACL|SEARCH|GRAPHQL)\s+/i.exec(line)) {
             method = match[1];
             url = line.substr(match[0].length);
         } else {
